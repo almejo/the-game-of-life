@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=0.0.1
+Type=Application
+Name=The Game Of Life
+GenericName=The Game Of Life
+Exec=the-game-of-life
+Icon=${SNAP}/meta/gui/the-game-of-life.png
+Terminal=false
+Path=/usr/bin/
+Categories=Game;
+StartupNotify=true

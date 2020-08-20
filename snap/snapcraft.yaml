@@ -1,0 +1,19 @@
+name: the-game-of-life
+version: 0.0.1
+summary: Conway's Game of Life
+description: |
+  A simple implementation of the Conway's Game of Life. It's build using flutter and dart.
+confinement: strict
+base: core18
+grade: stable
+
+apps:
+  the-game-of-life:
+    command: game_of_life
+    extensions: [flutter-master]
+
+parts:
+  the-game-of-life:
+    source: .
+    plugin: flutter
+    flutter-target: lib/main.dart
