@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:game_of_life/simulator.dart';
@@ -13,30 +13,37 @@ class LifeCanvas extends StatefulWidget {
   _LifeCanvasState createState() => _LifeCanvasState();
 }
 
-class _LifeCanvasState extends State<LifeCanvas> {
+class _LifeCanvasState extends State<LifeCanvas> with TickerProviderStateMixin {
   final _simulator = new Simulator(100, 100);
-  Timer _timer;
-  var _milliseconds = 50;
   bool _playing = false;
-
-  doSimulation(timer) {
-    if (_playing) {
-      _simulator.tick();
-    }
-    setState(() {});
-  }
+  Animation<double> animation;
+  AnimationController controller;
+  Tween<double> _rotationTween = Tween(begin: -math.pi, end: math.pi);
 
   @override
   void initState() {
-    _timer = Timer.periodic(Duration(milliseconds: _milliseconds), doSimulation);
-
     super.initState();
-  }
+    controller = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 10),
+    );
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+    animation = _rotationTween.animate(controller)
+      ..addListener(() {
+        if (_playing) {
+          _simulator.tick();
+        }
+        setState(() {});
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          controller.repeat();
+        } else if (status == AnimationStatus.dismissed) {
+          controller.forward();
+        }
+      });
+
+    controller.forward();
   }
 
   @override
@@ -45,6 +52,8 @@ class _LifeCanvasState extends State<LifeCanvas> {
     return Column(children: [
       GestureDetector(
           onVerticalDragStart: (details) => changeState(details),
+          onVerticalDragUpdate: (details) => changeState(details),
+          onHorizontalDragStart: (details) => changeState(details),
           onHorizontalDragUpdate: (details) => changeState(details),
           onTapDown: (details) => changeState(details),
           child: Container(
@@ -54,24 +63,30 @@ class _LifeCanvasState extends State<LifeCanvas> {
                 painter: LifePainter(simulator: _simulator),
                 child: Container(),
               ))),
-      Row(
-        children: [
-          RaisedButton(child: Icon(_playing ? Icons.pause  : Icons.play_arrow),
-            onPressed: () => {_playing = !_playing},),
-          Slider(
-            min: 1,
-            max: 10,
-            divisions: 8,
-            label: 'milliseconds $_milliseconds',
-            value: (_milliseconds.toDouble() ~/ 50).toDouble(),
-            onChanged: (value) {
-              _milliseconds = (value * 50).toInt() ;
-              _timer.cancel();
-              _timer = Timer.periodic(
-                  Duration(milliseconds: _milliseconds.toInt()), doSimulation);
-            },
-          )
-        ],
+      Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                RaisedButton(
+                  child: Icon(_playing ? Icons.pause : Icons.play_arrow),
+                  onPressed: () => {_playing = !_playing},
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                RaisedButton.icon(
+                    onPressed: () {
+                      _showClearDialog(context);
+                    },
+                    icon: Icon(Icons.delete),
+                    label: Text('Clear'))
+              ],
+            ),
+          ],
+        ),
       ),
     ]);
   }
@@ -79,6 +94,36 @@ class _LifeCanvasState extends State<LifeCanvas> {
   void changeState(details) {
     _simulator.changeState(
         details.localPosition.dx ~/ 5, details.localPosition.dy ~/ 5);
+  }
+
+  void _showClearDialog(context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: new Text("Clear all"),
+          content: new Text(
+              "Are you sure you want to clear the board? This cannot be undone"),
+          actions: <Widget>[
+            new FlatButton(
+              child: new Text("Cancel"),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            new FlatButton(
+              child: new Text("Ok"),
+              onPressed: () {
+                _simulator.clear();
+                Scaffold.of(context).showSnackBar(
+                    SnackBar(content: Text('Simulation restarted')));
+                Navigator.of(dialogContext).pop();
+              },
+            )
+          ],
+        );
+      },
+    );
   }
 }
 
