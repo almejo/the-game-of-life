@@ -1,3 +1,5 @@
+import 'dart:math';
+
 enum CellType {
   LIVE,
   DEAD,
@@ -38,7 +40,7 @@ class Simulator {
   }
 
   CellType getCellType(int x, int y) {
-    return _board[x % this.width][ y % this.height];
+    return _board[x % this.width][y % this.height];
   }
 
   bool isAlive(int x, int y) {
@@ -49,7 +51,8 @@ class Simulator {
     if (!inBounds(x, y)) {
       return;
     }
-    _board[x][y] = _board[x][y] == CellType.LIVE ? CellType.DEAD: CellType.LIVE;
+    _board[x][y] =
+        _board[x][y] == CellType.LIVE ? CellType.DEAD : CellType.LIVE;
   }
 
   void resizeWidth(int newWidth) {
@@ -95,5 +98,18 @@ class Simulator {
       [x, y + 1],
       [x + 1, y + 1]
     ].where((element) => isAlive(element[0], element[1])).toList().length;
+  }
+
+  void shuffle() {
+    Random random = new Random();
+    var newBoard = List.generate(
+        this.width, (i) => List.generate(this.height, (j) => CellType.DEAD));
+    for (int x = 0; x < this.width; x++) {
+      for (int y = 0; y < this.height; y++) {
+        newBoard[x][y] = random.nextInt(2) == 0 ? CellType.DEAD : CellType.LIVE;
+        print(newBoard[x][y] );
+      }
+    }
+    _board = newBoard;
   }
 }

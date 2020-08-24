@@ -19,6 +19,8 @@ class _LifeCanvasState extends State<LifeCanvas> with TickerProviderStateMixin {
   Animation<double> animation;
   AnimationController controller;
   Tween<double> _rotationTween = Tween(begin: -math.pi, end: math.pi);
+  int _oldX;
+  int _oldY;
 
   @override
   void initState() {
@@ -51,16 +53,16 @@ class _LifeCanvasState extends State<LifeCanvas> with TickerProviderStateMixin {
     _simulator.resizeWidth(widget.width ~/ 5.0);
     return Column(children: [
       GestureDetector(
-          onVerticalDragStart: (details) => changeState(details),
+          onVerticalDragStart: (details) => startChangeState(details),
           onVerticalDragUpdate: (details) => changeState(details),
-          onHorizontalDragStart: (details) => changeState(details),
+          onHorizontalDragStart: (details) => startChangeState(details),
           onHorizontalDragUpdate: (details) => changeState(details),
           onTapDown: (details) => changeState(details),
           child: Container(
               width: widget.width,
               height: 500,
               child: CustomPaint(
-                painter: LifePainter(simulator: _simulator),
+                painter: LifeCanvasPainter(simulator: _simulator),
                 child: Container(),
               ))),
       Padding(
@@ -73,16 +75,18 @@ class _LifeCanvasState extends State<LifeCanvas> with TickerProviderStateMixin {
                   child: Icon(_playing ? Icons.pause : Icons.play_arrow),
                   onPressed: () => {_playing = !_playing},
                 ),
-              ],
-            ),
-            Row(
-              children: [
+                RaisedButton(
+                  onPressed: () {
+                    _showSuffleDialog(context);
+                  },
+                  child: Icon(Icons.shuffle_rounded),
+                ),
                 RaisedButton.icon(
                     onPressed: () {
                       _showClearDialog(context);
                     },
                     icon: Icon(Icons.delete),
-                    label: Text('Clear'))
+                    label: Text('Clear')),
               ],
             ),
           ],
@@ -92,8 +96,18 @@ class _LifeCanvasState extends State<LifeCanvas> with TickerProviderStateMixin {
   }
 
   void changeState(details) {
-    _simulator.changeState(
-        details.localPosition.dx ~/ 5, details.localPosition.dy ~/ 5);
+    int newX = details.localPosition.dx ~/ 5;
+    int newY = details.localPosition.dy ~/ 5;
+    if (_oldX != newX || _oldY != newY) {
+      _simulator.changeState(newX, newY);
+      _oldX = newX;
+      _oldY = newY;
+    }
+  }
+
+  void startChangeState(details) {
+    _oldX = details.localPosition.dx ~/ 5;
+    _oldY = details.localPosition.dy ~/ 5;
   }
 
   void _showClearDialog(context) {
@@ -103,7 +117,7 @@ class _LifeCanvasState extends State<LifeCanvas> with TickerProviderStateMixin {
         return AlertDialog(
           title: new Text("Clear all"),
           content: new Text(
-              "Are you sure you want to clear the board? This cannot be undone"),
+              "Are you sure you want to clear the board? This can not be undone"),
           actions: <Widget>[
             new FlatButton(
               child: new Text("Cancel"),
@@ -125,12 +139,40 @@ class _LifeCanvasState extends State<LifeCanvas> with TickerProviderStateMixin {
       },
     );
   }
+
+  void _showSuffleDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: new Text("Shuffle cells"),
+          content: new Text(
+              "Are you sure you want to shuffle the board? This can not be undone"),
+          actions: <Widget>[
+            new FlatButton(
+              child: new Text("Cancel"),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            new FlatButton(
+              child: new Text("Ok"),
+              onPressed: () {
+                _simulator.shuffle();
+                Navigator.of(dialogContext).pop();
+              },
+            )
+          ],
+        );
+      },
+    );
+  }
 }
 
-class LifePainter extends CustomPainter {
+class LifeCanvasPainter extends CustomPainter {
   Simulator simulator;
 
-  LifePainter({this.simulator});
+  LifeCanvasPainter({this.simulator});
 
   @override
   bool shouldRepaint(CustomPainter old) {
